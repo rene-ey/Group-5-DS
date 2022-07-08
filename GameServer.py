@@ -3,9 +3,8 @@ from UdpClient import UdpClient
 import threading
 
 class GameServer:
-    def __init__(self, host: str, udp_port: int, tcp_port: int, is_leader: bool):
+    def __init__(self, host: str, tcp_port: int, is_leader: bool):
         self.tcp_port = tcp_port
-        self.udp_port = udp_port
         self.host = host
         self.is_leader = is_leader
         self.shared_bool = threading.Event()
