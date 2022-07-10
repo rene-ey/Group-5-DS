@@ -1,17 +1,22 @@
 import socket
 import struct
 import threading
+import json
 
+#Multicast connection Client-Server 
 class UdpClient:
     MCAST_GRP = '224.1.1.1'
     MCAST_PORT = 5007
 
     def __init__(self, is_leader: bool, event: threading.Event, tcp_port: int):
+        self.host = socket.gethostbyname(socket.gethostname())
         self.leader = is_leader
         self.tcp_port = tcp_port
         self.is_free = True
         self.shared_bool = event
         self.searching = []
+        
+        #Create Multicastlistener
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
@@ -23,20 +28,21 @@ class UdpClient:
 
 
     def run(self):
-        print("Start listening udp")
+        print("Start listening UDP for Multicast Messages on {}:{}".format(self.MCAST_GRP, self.MCAST_PORT))
         while True:
             data, address = self.socket.recvfrom(10240)
             if data.decode() == "searching" and self.leader is True:
-                print("I am looking for a game server for: ")
-                print("Client:", address)
+                print("I am looking for a game server for client: {}".format(address))
                 self.searching.append(address)
             elif data.decode() == "searching" and self.leader is False:
                 send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
                 send_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
                 if not self.shared_bool.is_set():
-                    print("Sending free message")
+                    print("Sending ,I am free, message to the leader")
                     msg = f"IM FREE {self.tcp_port}"
                     send_socket.sendto(bytes(msg, encoding="utf-8"), (self.MCAST_GRP, self.MCAST_PORT))
+                    
+
                 send_socket.close()
             if data.decode().startswith("IM FREE") and self.leader is True:
                 port = data.decode().split(" ")[-1]

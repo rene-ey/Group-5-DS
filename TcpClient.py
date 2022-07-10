@@ -1,21 +1,14 @@
-from re import T
 import socket
 import threading
 import json
 
-"""
-    body: {
-        player_name: "Rene",
-    }
-"""
 
+#Gamelogic
 def get_result(player1, player2):
     result = ""
     rock = "rock"
     paper = "paper"
     scissors = "scissors"
-    print("Player 1:", player1)
-    print("Player 2:", player2)
 
     if player1 == player2:
         result = "DRAW"
@@ -36,22 +29,25 @@ def get_result(player1, player2):
             result = "WIN"
     return result
 
-
+#TCP Class
 class TcpClient:
     def __init__(self,host: str, port: int, event: threading.Event):
-        self.host = host
+        #Variablen deklarieren
+
+        #self.host = socket.gethostbyname(socket.gethostname())
+        self.host = ""
         self.port = port
         self.shared_bool = event
         self.is_free = True
-        self.player = {} #"Name": [], "address":[], "selection":[]
+        self.player = {} 
         self.score = {}
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.host, self.port))
 
-
+    # Server anhören
     def listen(self):
-        print("Start listening tcp on {}:{}".format(self.host,self.port))
+        print("Start listening for TCP-Connection on {}:{}".format(self.host,self.port))
         self.socket.listen(2)
         while True:
             if len(self.player) < 2:
@@ -73,12 +69,12 @@ class TcpClient:
                 data = client.recv(2048).decode()
             except ConnectionResetError:
                 self.player.pop(address, None)
-                # Reset Spielstand, weil der Gegner ragequited ist
+                # Reset Spielstand, weil Spieler rausgeflogen ist
                 self.shared_bool.clear()
                 client.close()
                 if len(self.player) > 0:
                     for key in self.player:
-                        self.player[key]["client"].sendall(b"Wait for oppenent")
+                        self.player[key]["client"].sendall(b"Wait for opponent")
                 break
             if not data:
                 self.player.pop(address, None)
@@ -87,24 +83,23 @@ class TcpClient:
                 client.close()
                 if len(self.player) > 0:
                     for key in self.player:
-                        self.player[key]["client"].sendall(b"Wait for oppenent")
+                        self.player[key]["client"].sendall(b"Wait for opponent")
                 break
             try:
                 json_data = json.loads(data)
-                print("Client sendet request:{}".format(json_data["method"]))
+                print("Client sended request: {}".format(json_data["method"]))
                 if json_data["method"] == "join":
                     if len(self.player) == 2:
                         self.shared_bool.set()
                         client.sendall(b"GO")
                     else:
-                        client.sendall(b"Wait for oppenent")
+                        client.sendall(b"Wait for opponent")
                 
                 elif json_data["method"] == "turn":
-                    print(json_data["selection"])
+                    print("Players turn was: {}".format(json_data["selection"]))
                     if len(self.player) < 2:
-                        client.sendall(b"Wait for oppenent")
+                        client.sendall(b"Wait for opponent")
 
-                    # Checken ob es die Auswahl überhaupt gibt
 
                     self.player[address]["selection"] = json_data["selection"]
 
@@ -120,7 +115,7 @@ class TcpClient:
                             elif game_status == "LOSE":
                                 client.sendall(b"LOSE")
                                 self.player[key]["client"].sendall(b"WIN")
-
+                            print('The result was sent to the players')
                             self.player[address]["selection"] = None
                             self.player[key]["selection"] = None
                             

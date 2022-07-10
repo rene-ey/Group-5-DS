@@ -44,21 +44,24 @@ def main():
                     if server in leader:
                         leader.clear()
             if len(leader) == 0 or len(leader) > 1:
-                print("mach mal leader")
+                print("Start Leader Election")
                 new_leader = leader_election(list(servers))
-                print(new_leader)
+                print("This is the new leader ",new_leader)
                 leader_msg = f"leader {new_leader}"
                 udp_sock.sendto(bytes(leader_msg, encoding="utf-8"), (MCAST_GRP, MCAST_PORT))
             if len(servers) == 1 and tries > 10:
-                port = int(list(servers)[0]) + 1
-                if port > 9001:
-                    port = 9000
-                cmd = f"python server1.py localhost {port} false"
-                subprocess.Popen(cmd.split(),stdout=subprocess.PIPE)
+                port = int(list(servers)[0]) + 2
+                '''if port > 9001:
+                    port = 9000'''
+                try:
+                    cmd = f"python server1.py localhost {port} false"
+                    subprocess.Popen(cmd.split(),stdout=subprocess.PIPE)
+                except OSError:
+                    pass
 
 
         except socket.timeout:
-            print("all server down")
+            print("All servers are down - - New servers are being started")
             servers = {}
             leader.clear()
             cmd = "python server1.py localhost 9000 true"
